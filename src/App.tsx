@@ -28,12 +28,30 @@ function App() {
   const [gameOver, setGameOver] = useState(false);
   const [consecutiveWrong, setConsecutiveWrong] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(600); // 600 seconds = 10 minutes
+  const [timerActive, setTimerActive] = useState(true);
 
   useEffect(() => {
     // Randomly select 10 questions
     const shuffled = [...quizData].sort(() => 0.5 - Math.random());
     setQuestions(shuffled.slice(0, 10));
   }, []);
+
+  useEffect(() => {
+    if (timeLeft === 0) {
+      setGameOver(true);
+      setTimerActive(false);
+      return;
+    }
+
+    if (!timerActive) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, timerActive]);
 
   const handleSubmit = () => {
     const isCorrect = userAnswer.toLowerCase() === questions[currentQuestion].a.toLowerCase();
@@ -52,11 +70,18 @@ function App() {
 
     if (currentQuestion === 9) {
       setGameOver(true);
+      setTimerActive(false);
     } else {
       setCurrentQuestion(prev => prev + 1);
       setUserAnswer('');
       setShowAnswer(false);
     }
+  };
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   if (questions.length === 0) return <div>Loading...</div>;
@@ -76,9 +101,14 @@ function App() {
                 <span className="text-sm font-medium text-gray-600">
                   Soru {currentQuestion + 1}/10
                 </span>
-                <span className="text-sm font-medium text-gray-600">
-                  Skor: {score}
-                </span>
+                <div className="flex gap-4">
+                  <span className={`text-sm font-medium ${timeLeft < 60 ? 'text-red-600' : 'text-gray-600'}`}>
+                    Süre: {formatTime(timeLeft)}
+                  </span>
+                  <span className="text-sm font-medium text-gray-600">
+                    Skor: {score}
+                  </span>
+                </div>
               </div>
               
               <h2 className="text-xl font-semibold text-gray-800 mb-4">
@@ -115,7 +145,7 @@ function App() {
           <div className="text-center">
             <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Test Tamamlandı!
+              {timeLeft === 0 ? 'Süre Doldu!' : 'Test Tamamlandı!'}
             </h2>
             <p className="text-lg text-gray-600 mb-6">
               Skorunuz: {score}/10 ({(score/10 * 100).toFixed(0)}%)
